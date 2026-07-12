@@ -27,6 +27,9 @@ export function createGoogleStt(env: Record<string, string | undefined>): STTAda
       let stream: ReturnType<SpeechV2.SpeechClient['_streamingRecognize']> | null = null;
       let ready = false;
       let closed = false;
+      // Google がストリームを終了/破棄した後（short モデルが早期終了する等）に write すると
+      // 「write after destroyed」で落ちるため、破棄後は書き込みをスキップするフラグ。
+      let streamDead = false;
 
       // クライアント生成・接続確立は非同期。確立前の音声は pending に積む。
       void (async () => {
@@ -52,7 +55,14 @@ export function createGoogleStt(env: Record<string, string | undefined>): STTAda
             }
           });
           s.on('error', (err: Error) => {
+            streamDead = true;
             if (!closed) onError(err);
+          });
+          s.on('end', () => {
+            streamDead = true;
+          });
+          s.on('close', () => {
+            streamDead = true;
           });
 
           // config リクエストを最初に一度だけ送る。
@@ -92,9 +102,14 @@ export function createGoogleStt(env: Record<string, string | undefined>): STTAda
 
       return {
         sendAudio(chunk: Uint8Array): void {
-          if (closed) return;
+          if (closed || streamDead) return;
           if (ready && stream) {
-            stream.write({ audio: chunk });
+            try {
+              stream.write({ audio: chunk });
+            } catch {
+              // ストリーム破棄直後の write レース。モデル単位で隔離し無視する。
+              streamDead = true;
+            }
           } else {
             pending.push(chunk);
           }

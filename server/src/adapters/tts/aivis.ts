@@ -1,7 +1,24 @@
-import type { TTSAdapter, TTSRequest } from './types.js';
+import type { TTSAdapter, TTSRequest, Voice } from './types.js';
 
 /** Aivis Cloud API の音声合成エンドポイント（2026-07 時点、公式 OpenAPI で確認）。 */
 const AIVIS_SYNTHESIZE_URL = 'https://api.aivis-project.com/v1/tts/synthesize';
+
+/** AivisHub のモデル検索（公開・認証不要）。人気順で公式+コミュニティを取得する。 */
+const AIVIS_SEARCH_URL = 'https://api.aivis-project.com/v1/aivm-models/search?sort=download&limit=30';
+
+/**
+ * aivm-models/search のレスポンスから合成用のモデル一覧を組み立てる。
+ * voice には合成時に model_uuid として渡す UUID を入れる。
+ * @param json 検索 API レスポンス（未検証の unknown）
+ * @returns ボイス（＝モデル）一覧
+ */
+export function parseAivisModels(json: unknown): Voice[] {
+  const list = (json as { aivm_models?: unknown } | null)?.aivm_models;
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((m): m is { aivm_model_uuid: string; name?: string } => Boolean(m) && typeof m.aivm_model_uuid === 'string')
+    .map((m) => ({ id: m.aivm_model_uuid, label: typeof m.name === 'string' && m.name ? m.name : m.aivm_model_uuid }));
+}
 
 /**
  * Aivis Cloud API がリクエストボディで受け付ける合成パラメータの許可リスト。
@@ -46,6 +63,16 @@ function pickSupportedParams(params: Record<string, unknown>): Record<string, un
  */
 export function createAivisTts(env: Record<string, string | undefined>): TTSAdapter {
   return {
+    // AivisHub の公開検索 API（認証不要）から人気モデルを取得して選択肢にする。
+    async listVoices(): Promise<Voice[]> {
+      const res = await fetch(AIVIS_SEARCH_URL);
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`aivis models: request failed (${res.status})${detail ? `: ${detail}` : ''}`);
+      }
+      return parseAivisModels(await res.json());
+    },
+
     /**
      * テキストを Aivis Cloud API で音声合成し、mp3 バイトチャンクをストリーミングで yield する。
      * req.voice に AivisHub のモデル UUID を指定する。

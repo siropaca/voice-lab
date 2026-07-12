@@ -2,33 +2,48 @@ import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import type { protos } from '@google-cloud/text-to-speech';
 import type { TTSAdapter, TTSRequest, Voice } from './types.js';
 
+/** フルネーム系モデル（voice 名に系統が内包される）の voices.list 抽出フィルタ。 */
+const GOOGLE_VOICE_FILTER: Record<string, RegExp> = {
+  'chirp3-hd': /Chirp3-HD/i,
+  neural2: /Neural2/i,
+  wavenet: /Wavenet/i,
+  standard: /Standard/i,
+};
+
 /**
  * voices.list（ja-JP）のレスポンスをモデルごとのボイス一覧へ整形する。
  *
- * - chirp3-hd: `ja-JP-Chirp3-HD-<Name>` のフルネームを id に、末尾の Name を label にする。
- * - gemini:   Chirp3-HD と同一の天体名ファミリーを使うため、同じ ja-JP Chirp3-HD の
- *             一覧から短縮名（Name）を導出して id/label にする（Gemini TTS は短名指定）。
+ * - chirp3-hd / neural2 / wavenet / standard: `ja-JP-<系統>-<Name>` のフルネームを id に、
+ *   末尾の Name を label にする（合成時は voice 名だけで系統が決まる）。
+ * - gemini*: Chirp3-HD と同一の天体名ファミリーを使うため、同じ ja-JP Chirp3-HD の
+ *   一覧から短縮名（Name）を導出して id/label にする（Gemini TTS は短名 + modelName 指定）。
  *
  * ja-JP で実際に提供されているボイスだけが返るため、提供状況の変化に自動追従する。
  * @param apiVoices voices.list の voices 配列（name フィールドのみ参照）
- * @param model ModelEntry.model（'chirp3-hd' / 'gemini-2.5-flash-tts'）
+ * @param model ModelEntry.model
  */
 export function parseGoogleVoices(
   apiVoices: ReadonlyArray<{ name?: string | null }>,
   model: string,
 ): Voice[] {
-  const chirpNames = apiVoices
-    .map((v) => v.name)
-    .filter((n): n is string => typeof n === 'string' && /Chirp3-HD/i.test(n));
+  const names = apiVoices.map((v) => v.name).filter((n): n is string => typeof n === 'string');
 
-  if (model === 'chirp3-hd') {
-    return chirpNames.map((name) => ({ id: name, label: name.split('-').pop() ?? name }));
+  // gemini 系は Chirp3-HD の天体名ファミリーから短縮名を導出する。
+  if (model.startsWith('gemini')) {
+    return names
+      .filter((n) => /Chirp3-HD/i.test(n))
+      .map((name) => {
+        const short = name.split('-').pop() ?? name;
+        return { id: short, label: short };
+      });
   }
-  // gemini（および将来の短名指定モデル）: 天体名の短縮形を使う。
-  return chirpNames.map((name) => {
-    const short = name.split('-').pop() ?? name;
-    return { id: short, label: short };
-  });
+
+  const re = GOOGLE_VOICE_FILTER[model] ?? /Chirp3-HD/i;
+  // ラベルは locale 接頭辞を剥がす。Chirp3-HD は天体名だけ（例 Aoede）、
+  // Neural2/Wavenet/Standard は系統名付き（例 Neural2-B）で識別できるようにする。
+  return names
+    .filter((n) => re.test(n))
+    .map((name) => ({ id: name, label: name.replace(/^[a-z]{2}-[A-Z]{2}-/, '').replace(/^Chirp3-HD-/, '') }));
 }
 
 /**
@@ -63,12 +78,13 @@ export function createGoogleTts(env: Record<string, string | undefined>): TTSAda
     async *synthesize(req: TTSRequest): AsyncIterable<Uint8Array> {
       const activeClient = getClient();
 
-      // Chirp 3 HD はモデルが voice 名（ja-JP-Chirp3-HD-*）に内包されるため modelName 不要。
-      // Gemini TTS は voice.name が Kore/Puck 等の短名なので modelName でモデルを指定する。
-      const voice: protos.google.cloud.texttospeech.v1.IVoiceSelectionParams =
-        req.model === 'chirp3-hd'
-          ? { languageCode: 'ja-JP', name: req.voice }
-          : { languageCode: 'ja-JP', name: req.voice, modelName: req.model };
+      // フルネーム voice（ja-JP-Chirp3-HD-* / -Neural2-* / -Wavenet-* / -Standard-* 等）は
+      // 系統が名前に内包されるため modelName 不要。Gemini TTS は Kore/Puck 等の短名なので
+      // modelName でモデルを指定する。
+      const isFullName = /^[a-z]{2}-[A-Z]{2}-/.test(req.voice);
+      const voice: protos.google.cloud.texttospeech.v1.IVoiceSelectionParams = isFullName
+        ? { languageCode: 'ja-JP', name: req.voice }
+        : { languageCode: 'ja-JP', name: req.voice, modelName: req.model };
 
       const request: protos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
         input: { text: req.text },
