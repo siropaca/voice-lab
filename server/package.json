@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@google-cloud/speech": "^7.5.0",
+    "@google-cloud/text-to-speech": "^6.4.1",
     "@hono/node-server": "^1.13.0",
     "@hono/node-ws": "^1.0.4",
     "@voice-lab/shared": "workspace:*",
