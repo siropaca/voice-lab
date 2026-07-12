@@ -10,6 +10,12 @@
 
 **Spec:** `docs/specs/2026-07-12-voice-lab-design.md`
 
+> **現状との差分（2026-07-12 更新。この計画は着手時点の記録）**
+> - **履歴（Task 17）は削除済み**。サーバーの `history.ts` / `/api/history`、クライアントの履歴ページは実装後に撤去した。TTS/STT ルートの履歴保存も無い。
+> - **モデルは既定で全部表示・全部比較**（Task 10/16 の「モデル選択」は、既定全選択＋個別除外の形に変更）。
+> - Task 18〜19（Basic 認証・Cloud Run デプロイ）はフェーズ2で未着手。
+> - 実装は plan の TDD 手順どおりではなく、基盤→アダプター並列→UI の順で構築し、実 API キーで動作確認済み。
+
 ## Global Constraints
 
 - Node 22+ / pnpm 9+ / TypeScript strict
