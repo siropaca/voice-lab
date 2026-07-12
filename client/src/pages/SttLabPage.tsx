@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import type { ModelsResponse, SttModelSummary, SttServerMessage } from '@voice-lab/shared';
 import { fetchModels } from '../lib/api';
-import { startMic, type MicCapture } from '../lib/mic';
+import { listMics, startMic, type MicCapture, type MicDevice } from '../lib/mic';
 import { providerColor } from '../lib/providers';
 import ModelPicker, { type ModelConfig } from '../components/ModelPicker';
 import LevelMeter from '../components/LevelMeter';
+
+const MIC_STORAGE_KEY = 'voice-lab:stt-mic';
 
 interface Column {
   modelKey: string;
@@ -25,6 +27,9 @@ export default function SttLabPage() {
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState('');
   const [level, setLevel] = useState(0);
+  const [mics, setMics] = useState<MicDevice[]>([]);
+  const [micId, setMicId] = useState(() => localStorage.getItem(MIC_STORAGE_KEY) ?? 'default');
+  const [micError, setMicError] = useState('');
   const wsRef = useRef<WebSocket | null>(null);
   const micRef = useRef<MicCapture | null>(null);
 
@@ -41,6 +46,25 @@ export default function SttLabPage() {
       wsRef.current?.close();
     };
   }, []);
+
+  useEffect(() => {
+    const refresh = () => listMics().then(setMics).catch(() => setMics([]));
+    refresh();
+    navigator.mediaDevices.addEventListener('devicechange', refresh);
+    return () => navigator.mediaDevices.removeEventListener('devicechange', refresh);
+  }, []);
+
+  // 保存していたマイクが外された等で一覧に無い場合は既定へ戻す。
+  useEffect(() => {
+    if (mics.length > 0 && !mics.some((m) => m.deviceId === micId)) {
+      setMicId(mics.some((m) => m.deviceId === 'default') ? 'default' : mics[0].deviceId);
+    }
+  }, [mics, micId]);
+
+  const selectMic = (id: string) => {
+    setMicId(id);
+    localStorage.setItem(MIC_STORAGE_KEY, id);
+  };
 
   const patch = (modelKey: string, fn: (c: Column) => Column) =>
     setColumns((prev) => prev.map((c) => (c.modelKey === modelKey ? fn(c) : c)));
@@ -80,12 +104,24 @@ export default function SttLabPage() {
       ws.onerror = () => reject(new Error('ws error'));
     });
 
-    micRef.current = await startMic(
-      (pcm) => {
-        if (ws.readyState === WebSocket.OPEN) ws.send(pcm.buffer);
-      },
-      (lvl) => setLevel(lvl),
-    );
+    const onChunk = (pcm: Int16Array) => {
+      if (ws.readyState === WebSocket.OPEN) ws.send(pcm.buffer);
+    };
+    setMicError('');
+    try {
+      micRef.current = await startMic(onChunk, setLevel, micId || undefined);
+    } catch {
+      try {
+        // 指定デバイスが取得できない場合（取り外し等）は自動選択で再試行する。
+        micRef.current = await startMic(onChunk, setLevel);
+      } catch (e) {
+        ws.close();
+        setMicError(`マイクを取得できません: ${e instanceof Error ? e.message : String(e)}`);
+        return;
+      }
+    }
+    // 権限付与後はラベルが取れるようになるため一覧を更新する。
+    listMics().then(setMics).catch(() => {});
     setRunning(true);
   };
 
@@ -140,6 +176,21 @@ export default function SttLabPage() {
                 ● 録音開始 ({selected.length})
               </button>
             )}
+            <select
+              className="field field--inline"
+              style={{ width: 'auto', maxWidth: 280 }}
+              value={micId}
+              disabled={running}
+              onChange={(e) => selectMic(e.target.value)}
+              aria-label="使用するマイク"
+            >
+              {mics.length === 0 && <option value="default">既定のマイク</option>}
+              {mics.map((m) => (
+                <option key={m.deviceId} value={m.deviceId}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
             <LevelMeter level={running ? level : 0} />
             <input
               className="field field--inline"
@@ -149,6 +200,7 @@ export default function SttLabPage() {
               onChange={(e) => setNote(e.target.value)}
             />
           </div>
+          {micError && <p className="channel__err">{micError}</p>}
         </div>
       )}
 
