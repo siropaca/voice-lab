@@ -18,7 +18,11 @@ export const MODELS: ModelEntry[] = [
     key: 'elevenlabs/eleven_flash_v2_5', kind: 'tts', provider: 'elevenlabs', providerLabel: 'ElevenLabs',
     model: 'eleven_flash_v2_5', label: 'Flash v2.5（低遅延）', requiredEnv: ['ELEVENLABS_API_KEY'],
     streaming: true, audioFormat: 'mp3',
-    voices: [], // Task 6 で /v1/voices から取得して埋める方針を決める
+    // 暫定の多言語ボイス（日本語ネイティブではない）。本番選定では GET /v2/voices で日本語ボイスに差し替える。
+    voices: [
+      { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Sarah（暫定・多言語）' },
+      { id: 'XB0fDUnXU5powFXDhCwa', label: 'Charlotte（暫定・多言語）' },
+    ],
     params: [
       { name: 'stability', label: 'stability', type: 'number', min: 0, max: 1, step: 0.05, defaultValue: 0.5 },
       { name: 'similarity_boost', label: 'similarity', type: 'number', min: 0, max: 1, step: 0.05, defaultValue: 0.75 },
@@ -27,7 +31,11 @@ export const MODELS: ModelEntry[] = [
   {
     key: 'elevenlabs/eleven_v3', kind: 'tts', provider: 'elevenlabs', providerLabel: 'ElevenLabs',
     model: 'eleven_v3', label: 'v3（品質重視）', requiredEnv: ['ELEVENLABS_API_KEY'],
-    streaming: false, audioFormat: 'mp3', voices: [],
+    streaming: false, audioFormat: 'mp3',
+    voices: [
+      { id: 'EXAVITQu4vr4xnSDxMaL', label: 'Sarah（暫定・多言語）' },
+      { id: 'XB0fDUnXU5powFXDhCwa', label: 'Charlotte（暫定・多言語）' },
+    ],
     note: 'リアルタイム非対応。品質比較用',
   },
   {
@@ -51,7 +59,11 @@ export const MODELS: ModelEntry[] = [
     key: 'aivis/default', kind: 'tts', provider: 'aivis', providerLabel: 'Aivis Cloud',
     model: 'default', label: 'AivisSpeech', requiredEnv: ['AIVIS_API_KEY'],
     streaming: true, audioFormat: 'mp3',
-    voices: [], // Task 7 で公式モデル UUID（コハク・まお等）を確認して埋める
+    // AivisHub の公式コラボモデル UUID（公式プレスリリースで確認済み）。
+    voices: [
+      { id: '22e8ed77-94fe-4ef2-871f-a86f94e9a579', label: 'コハク' },
+      { id: 'a59cb814-0083-4369-8542-f51a29e72af7', label: 'まお' },
+    ],
     params: [
       { name: 'speaking_rate', label: '速度', type: 'number', min: 0.5, max: 2, step: 0.05, defaultValue: 1 },
       { name: 'emotional_intensity', label: '感情強度', type: 'number', min: 0, max: 2, step: 0.1, defaultValue: 1 },
