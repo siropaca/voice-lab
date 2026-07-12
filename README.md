@@ -19,8 +19,7 @@
 ## セットアップ
 
 ```bash
-pnpm install
-cp server/.env.example server/.env   # キーを記入する
+make bootstrap   # 依存インストール + server/.env を用意（make を使わないなら pnpm install && cp server/.env.example server/.env）
 ```
 
 `server/.env` に持っているぶんだけ記入すればよい（キーのあるモデルだけ GUI に出る）:
@@ -40,7 +39,7 @@ Google は Text-to-Speech API と Speech-to-Text API を有効化し、サービ
 ## 起動
 
 ```bash
-pnpm dev        # client (5173) と server (3001) を同時起動
+make dev        # = pnpm dev。client (5173) と server (3001) を同時起動
 ```
 
 ブラウザで http://localhost:5173 を開く。マイク取得のため STT Lab は `localhost`（または HTTPS）で使うこと。
@@ -48,9 +47,11 @@ pnpm dev        # client (5173) と server (3001) を同時起動
 ## テスト / 型チェック
 
 ```bash
-pnpm -r test
-pnpm -r typecheck
+make test        # = pnpm -r test
+make typecheck   # = pnpm -r typecheck
 ```
+
+`make help` で全ターゲットを一覧できる。
 
 ## 既知の注意点
 
