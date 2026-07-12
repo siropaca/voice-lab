@@ -42,6 +42,11 @@ export async function startMic(
     onChunk(floatTo16BitPcm(downsample(frame, ctx.sampleRate, 16000)));
   };
   source.connect(node);
+  // AudioWorklet の process() は、出力がグラフ上で destination まで到達していないと
+  // 呼ばれない。CaptureProcessor は出力に何も書かない（＝無音）ので、destination に
+  // 繋いでも音は鳴らない。これが無いとフレームが一切流れずメーター/送信が動かない。
+  node.connect(ctx.destination);
+  if (ctx.state === 'suspended') await ctx.resume();
   return {
     stop() {
       node.port.onmessage = null;
