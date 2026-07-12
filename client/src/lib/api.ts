@@ -1,9 +1,16 @@
-import type { ModelsResponse, TtsStreamLine } from '@voice-lab/shared';
+import type { ModelsResponse, TtsStreamLine, VoicesResponse } from '@voice-lab/shared';
 
 /** GET /api/models */
 export async function fetchModels(): Promise<ModelsResponse> {
   const res = await fetch('/api/models');
   if (!res.ok) throw new Error(`models: ${res.status}`);
+  return res.json();
+}
+
+/** GET /api/voices — TTS モデルごとの利用可能ボイス一覧（プロバイダーから動的取得）。 */
+export async function fetchVoices(): Promise<VoicesResponse> {
+  const res = await fetch('/api/voices');
+  if (!res.ok) throw new Error(`voices: ${res.status}`);
   return res.json();
 }
 

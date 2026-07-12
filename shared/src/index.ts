@@ -46,6 +46,15 @@ export interface ModelsResponse {
   unavailable: UnavailableModel[];
 }
 
+/**
+ * GET /api/voices のレスポンス。TTS モデルごとに、プロバイダーから取得した
+ * 現在利用可能なボイス一覧をモデルキーで引ける形で返す。
+ * 取得に失敗したモデルは registry のシード（ModelEntry.voices）にフォールバックする。
+ */
+export interface VoicesResponse {
+  voices: Record<string, VoiceSpec[]>; // key: ModelEntry.key
+}
+
 // ---- TTS ストリーム（Task 4） ----
 
 export type TtsStreamLine =

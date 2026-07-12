@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import type { ModelsResponse } from '@voice-lab/shared';
-import { fetchModels, streamTts } from '../lib/api';
+import type { ModelsResponse, VoiceSpec } from '@voice-lab/shared';
+import { fetchModels, fetchVoices, streamTts } from '../lib/api';
 import { MsePlayer } from '../lib/mse-player';
 import { providerColor } from '../lib/providers';
 import ModelPicker, { defaultConfig, type ModelConfig } from '../components/ModelPicker';
@@ -31,6 +31,7 @@ export default function TtsLabPage() {
   const [models, setModels] = useState<ModelsResponse | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [configs, setConfigs] = useState<Record<string, ModelConfig>>({});
+  const [voicesByModel, setVoicesByModel] = useState<Record<string, VoiceSpec[]>>({});
   const [text, setText] = useState(PRESETS[0]);
   const [cards, setCards] = useState<CardState[]>([]);
   const playersRef = useRef<Record<string, MsePlayer>>({});
@@ -44,6 +45,10 @@ export default function TtsLabPage() {
         setSelected(m.available.filter((x) => x.kind === 'tts').map((x) => x.key));
       })
       .catch(() => setModels({ available: [], unavailable: [] }));
+    // 各プロバイダーから現在のボイス一覧を取得（失敗しても registry シードで動く）。
+    fetchVoices()
+      .then((v) => setVoicesByModel(v.voices))
+      .catch(() => setVoicesByModel({}));
   }, []);
 
   const patch = (modelKey: string, p: Partial<CardState>) =>
@@ -81,7 +86,7 @@ export default function TtsLabPage() {
 
     for (const modelKey of selected) {
       const m = models.available.find((x) => x.key === modelKey)!;
-      const cfg = configs[modelKey] ?? defaultConfig(m);
+      const cfg = configs[modelKey] ?? defaultConfig(m, voicesByModel[modelKey]);
       const player = new MsePlayer();
       playersRef.current[modelKey] = player;
       player.audioEl.style.display = 'none';
@@ -175,6 +180,7 @@ export default function TtsLabPage() {
           onChange={setSelected}
           configs={configs}
           onConfigChange={(k, c) => setConfigs((prev) => ({ ...prev, [k]: c }))}
+          voicesByModel={voicesByModel}
         />
       )}
 

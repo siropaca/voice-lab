@@ -57,7 +57,7 @@ make typecheck   # = pnpm -r typecheck
 ## 既知の注意点
 
 - **STT のマイクは画面のセレクタで選ぶ**。Chrome は deviceId 未指定だと OS の既定デバイスではなく独自の優先順位（内蔵マイクなど）で選ぶため、既定では OS 既定に追従する仮想 `default` デバイスを使い、任意のマイクをセレクタで明示選択できる（選択は localStorage に保存）。ドック運用でクラムシェル状態だと内蔵マイクは無音になる点に注意。
-- **ElevenLabs の声は暫定**（多言語ボイスの `voice_id` を仮設定）。日本語ネイティブではないため、キー取得後に `GET /v2/voices` を叩いて日本語ボイスの `voice_id` を `server/src/registry.ts` に反映することを推奨。
+- **ボイス一覧はプロバイダーから動的取得**。TTS のボイスは `GET /api/voices` が各社 API から実行時に取得する（Google=`voices.list` を ja-JP でフィルタ、ElevenLabs=`GET /v2/voices` のアカウントライブラリ、OpenAI=固定 13 種、Aivis 等は registry のシードにフォールバック）。registry の `voices` は取得失敗時のフォールバック用シード。ラボとして「今そのプロバイダーで使えるボイス」を常に全部選べる。
 - **レイテンシ値はネットワーク依存**。ローカル実行時は「自宅回線 → 各社」の値になる。本番想定（東京 DC → 各社）の数値が必要なら Cloud Run 等へのデプロイ後に計測する（デプロイは第二フェーズ）。
 
 ## 構成

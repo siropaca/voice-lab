@@ -1,7 +1,24 @@
-import type { TTSAdapter, TTSRequest } from './types.js';
+import type { TTSAdapter, TTSRequest, Voice } from './types.js';
 
 /** ElevenLabs TTS のベース URL（voice_id を付けて使う）。 */
 const TTS_BASE_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
+
+/** アカウントのボイスライブラリ一覧（page_size は最大 100）。 */
+const VOICES_URL = 'https://api.elevenlabs.io/v2/voices?page_size=100';
+
+/**
+ * GET /v2/voices のレスポンスから voice_id / name を抽出する。
+ * name が無ければ voice_id を表示名に使う。
+ * @param json API レスポンス（未検証の unknown）
+ * @returns ボイス一覧
+ */
+export function parseElevenLabsVoices(json: unknown): Voice[] {
+  const voices = (json as { voices?: unknown } | null)?.voices;
+  if (!Array.isArray(voices)) return [];
+  return voices
+    .filter((v): v is { voice_id: string; name?: string } => Boolean(v) && typeof v.voice_id === 'string')
+    .map((v) => ({ id: v.voice_id, label: typeof v.name === 'string' && v.name ? v.name : v.voice_id }));
+}
 
 /** レジストリの audioFormat（mp3）に合わせた出力フォーマット。 */
 const OUTPUT_FORMAT = 'mp3_44100_128';
@@ -32,6 +49,18 @@ function pickNumberParam(params: Record<string, unknown>, key: string): number |
  */
 export function createElevenLabsTts(env: Record<string, string | undefined>): TTSAdapter {
   return {
+    // 両モデル共通でアカウントのボイスライブラリを返す（model による絞り込みなし）。
+    async listVoices(): Promise<Voice[]> {
+      const apiKey = env.ELEVENLABS_API_KEY;
+      if (!apiKey) throw new Error('elevenlabs tts: ELEVENLABS_API_KEY is not set');
+      const res = await fetch(VOICES_URL, { headers: { 'xi-api-key': apiKey } });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`elevenlabs voices: request failed (${res.status})${detail ? `: ${detail}` : ''}`);
+      }
+      return parseElevenLabsVoices(await res.json());
+    },
+
     async *synthesize(req: TTSRequest): AsyncIterable<Uint8Array> {
       const apiKey = env.ELEVENLABS_API_KEY;
       if (!apiKey) {

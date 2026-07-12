@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { createNodeWebSocket } from '@hono/node-ws';
 import { modelsRoute } from './routes/models.js';
+import { voicesRoute } from './routes/voices.js';
 import { ttsRoute } from './routes/tts.js';
 import { sttWsRoute } from './routes/stt-ws.js';
 import { createOpenAiTts } from './adapters/tts/openai.js';
@@ -31,6 +32,11 @@ export function createApp(env: Record<string, string | undefined>) {
     aivis: createAivisTts(env),
     google: createGoogleTts(env),
   };
+  const resolveTts = (provider: string): TTSAdapter => {
+    const a = ttsAdapters[provider];
+    if (!a) throw new Error(`TTS adapter not found: ${provider}`);
+    return a;
+  };
 
   const sttAdapters: Record<string, STTAdapter> = {
     openai: createOpenAiRealtimeStt(env),
@@ -39,14 +45,8 @@ export function createApp(env: Record<string, string | undefined>) {
     google: createGoogleStt(env),
   };
 
-  app.route(
-    '/api/tts',
-    ttsRoute((provider) => {
-      const a = ttsAdapters[provider];
-      if (!a) throw new Error(`TTS adapter not found: ${provider}`);
-      return a;
-    }),
-  );
+  app.route('/api/voices', voicesRoute(env, resolveTts));
+  app.route('/api/tts', ttsRoute(resolveTts));
 
   app.route(
     '/ws/stt',

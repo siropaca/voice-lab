@@ -1,6 +1,15 @@
-import type { TTSAdapter, TTSRequest } from './types.js';
+import type { TTSAdapter, TTSRequest, Voice } from './types.js';
 
 const OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech';
+
+/**
+ * gpt-4o-mini-tts で利用可能な組み込みボイス（2026-07 時点、公式ドキュメントで確認）。
+ * OpenAI にはボイス一覧 API が無くプロバイダー固定のため静的に保持する。
+ */
+export const OPENAI_TTS_VOICES: Voice[] = [
+  'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'nova',
+  'onyx', 'sage', 'shimmer', 'verse', 'marin', 'cedar',
+].map((id) => ({ id, label: id }));
 
 /**
  * OpenAI TTS アダプター。
@@ -13,6 +22,11 @@ const OPENAI_SPEECH_URL = 'https://api.openai.com/v1/audio/speech';
  */
 export function createOpenAiTts(env: Record<string, string | undefined>): TTSAdapter {
   return {
+    // OpenAI は一覧 API を持たないため、プロバイダー固定の組み込みボイスを返す。
+    async listVoices(): Promise<Voice[]> {
+      return OPENAI_TTS_VOICES;
+    },
+
     async *synthesize(req: TTSRequest): AsyncIterable<Uint8Array> {
       const apiKey = env.OPENAI_API_KEY;
       if (!apiKey) {

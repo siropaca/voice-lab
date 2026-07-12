@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ModelEntry, ModelsResponse } from '@voice-lab/shared';
+import type { ModelEntry, ModelsResponse, VoiceSpec } from '@voice-lab/shared';
 import { providerColor } from '../lib/providers';
 
 export interface ModelConfig {
@@ -8,9 +8,10 @@ export interface ModelConfig {
 }
 
 /** モデル定義からデフォルトの設定（先頭 voice + 各パラメータの既定値）を作る。 */
-export function defaultConfig(m: ModelEntry): ModelConfig {
+export function defaultConfig(m: ModelEntry, voices?: VoiceSpec[]): ModelConfig {
+  const list = voices ?? m.voices ?? [];
   return {
-    voice: m.voices?.[0]?.id ?? '',
+    voice: list[0]?.id ?? '',
     params: Object.fromEntries((m.params ?? []).map((p) => [p.name, p.defaultValue])),
   };
 }
@@ -22,13 +23,15 @@ interface Props {
   onChange: (keys: string[]) => void;
   configs: Record<string, ModelConfig>;
   onConfigChange: (key: string, config: ModelConfig) => void;
+  /** モデルキー→ボイス一覧（プロバイダーから動的取得。未取得は registry シードにフォールバック）。 */
+  voicesByModel?: Record<string, VoiceSpec[]>;
 }
 
 /**
  * 比較に載せるモデルを選ぶ「アーム」グリッド。プロバイダー色でチャンネルを識別する。
  * 選択中のモデルには voice / パラメータの調整コントロールを展開する。
  */
-export default function ModelPicker({ kind, models, selected, onChange, configs, onConfigChange }: Props) {
+export default function ModelPicker({ kind, models, selected, onChange, configs, onConfigChange, voicesByModel }: Props) {
   const list = models.available.filter((m) => m.kind === kind);
   const unavailable = models.unavailable.filter((u) => u.kind === kind);
 
@@ -39,7 +42,8 @@ export default function ModelPicker({ kind, models, selected, onChange, configs,
     <div className="arm-grid">
       {list.map((m) => {
         const on = selected.includes(m.key);
-        const cfg = configs[m.key] ?? defaultConfig(m);
+        const voices = voicesByModel?.[m.key] ?? m.voices ?? [];
+        const cfg = configs[m.key] ?? defaultConfig(m, voices);
         const style = { '--ch': providerColor(m.provider) } as CSSProperties;
         return (
           <div key={m.key} className={`arm${on ? ' arm--on' : ' arm--excluded'}`} style={style}>
@@ -57,13 +61,13 @@ export default function ModelPicker({ kind, models, selected, onChange, configs,
             <div className="arm__name">{m.label}</div>
             <div className="arm__meta">
               <span className={m.streaming ? 'stream' : ''}>{m.streaming ? 'streaming' : 'batch'}</span>
-              {m.voices && m.voices.length > 0 && <span>{m.voices.length} voices</span>}
+              {voices.length > 0 && <span>{voices.length} voices</span>}
             </div>
             {m.note && <div className="arm__note">{m.note}</div>}
 
-            {on && (m.voices?.length || m.params?.length) ? (
+            {on && (voices.length || m.params?.length) ? (
               <div className="arm__controls">
-                {m.voices && m.voices.length > 0 && (
+                {voices.length > 0 && (
                   <div className="ctl">
                     <label className="ctl__label" htmlFor={`voice-${m.key}`}>
                       voice
@@ -73,7 +77,7 @@ export default function ModelPicker({ kind, models, selected, onChange, configs,
                       value={cfg.voice}
                       onChange={(e) => onConfigChange(m.key, { ...cfg, voice: e.target.value })}
                     >
-                      {m.voices.map((v) => (
+                      {voices.map((v) => (
                         <option key={v.id} value={v.id}>
                           {v.label}
                         </option>
