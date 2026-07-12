@@ -271,6 +271,43 @@ button {
   display: grid;
   gap: 12px;
 }
+
+/* streaming / batch モードトグル */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--well);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  width: fit-content;
+}
+.segmented__opt {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.segmented__opt:hover {
+  color: var(--text);
+}
+.segmented__opt.is-on {
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: inset 0 -2px 0 var(--ok);
+}
+.segmented__opt:focus-visible {
+  outline: 2px solid var(--ok);
+  outline-offset: 2px;
+}
 .console__row {
   display: flex;
   align-items: center;

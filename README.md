@@ -58,6 +58,7 @@ make typecheck   # = pnpm -r typecheck
 
 - **STT のマイクは画面のセレクタで選ぶ**。Chrome は deviceId 未指定だと OS の既定デバイスではなく独自の優先順位（内蔵マイクなど）で選ぶため、既定では OS 既定に追従する仮想 `default` デバイスを使い、任意のマイクをセレクタで明示選択できる（選択は localStorage に保存）。ドック運用でクラムシェル状態だと内蔵マイクは無音になる点に注意。
 - **ボイス一覧はプロバイダーから動的取得**。TTS のボイスは `GET /api/voices` が各社 API から実行時に取得する（Google=`voices.list` を ja-JP でフィルタ、ElevenLabs=`GET /v2/voices` のアカウントライブラリ、OpenAI=固定 13 種、Aivis 等は registry のシードにフォールバック）。registry の `voices` は取得失敗時のフォールバック用シード。ラボとして「今そのプロバイダーで使えるボイス」を常に全部選べる。
+- **TTS 実験は streaming / batch を分けて行う**。画面上部のトグルで切り替え、そのモードのモデルだけを比較する（registry の `streaming` フラグで振り分け）。指標の意味が異なるため、streaming モードは「最初の音まで（TTFB）」、batch モードは「全文の合成時間」を主指標にして混在させない。選択モードは localStorage に保存。
 - **Google STT のリージョンはモデル固有**。Chirp 3 は `us`/`eu` マルチリージョンのみで `global` 不可（実測確認済み）。`latest_long` は `global` で提供。registry の `location` でモデルごとに指定し、無指定は `GOOGLE_SPEECH_LOCATION`（既定 `us`）に従う。別モデル/リージョンを試すのも registry 1 エントリで足せる。
 - **レイテンシ値はネットワーク依存**。ローカル実行時は「自宅回線 → 各社」の値になる。本番想定（東京 DC → 各社）の数値が必要なら Cloud Run 等へのデプロイ後に計測する（デプロイは第二フェーズ）。
 

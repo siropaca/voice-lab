@@ -39,6 +39,7 @@ export interface UnavailableModel {
   key: string;
   kind: ModelKind;
   label: string;
+  streaming: boolean; // TTS の streaming/batch モード振り分けに使う
   missingEnv: string[];
 }
 

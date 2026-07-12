@@ -3,6 +3,7 @@ import type { ModelsResponse, VoiceSpec } from '@voice-lab/shared';
 import { fetchModels, fetchVoices, streamTts } from '../lib/api';
 import { MsePlayer } from '../lib/mse-player';
 import { providerColor } from '../lib/providers';
+import { filterModelsByMode, MODE_METRIC, TTS_MODE_STORAGE_KEY, type TtsMode } from '../lib/ttsMode';
 import ModelPicker, { defaultConfig, type ModelConfig } from '../components/ModelPicker';
 import Equalizer from '../components/Equalizer';
 import Rail from '../components/Rail';
@@ -27,9 +28,14 @@ interface CardState {
   playing: boolean;
 }
 
+function initialMode(): TtsMode {
+  return localStorage.getItem(TTS_MODE_STORAGE_KEY) === 'batch' ? 'batch' : 'streaming';
+}
+
 export default function TtsLabPage() {
   const [models, setModels] = useState<ModelsResponse | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
+  const [mode, setMode] = useState<TtsMode>(initialMode);
+  const [selectedByMode, setSelectedByMode] = useState<Record<TtsMode, string[]>>({ streaming: [], batch: [] });
   const [configs, setConfigs] = useState<Record<string, ModelConfig>>({});
   const [voicesByModel, setVoicesByModel] = useState<Record<string, VoiceSpec[]>>({});
   const [text, setText] = useState(PRESETS[0]);
@@ -41,8 +47,11 @@ export default function TtsLabPage() {
     fetchModels()
       .then((m) => {
         setModels(m);
-        // 既定で全 TTS モデルを比較対象にする（アーム操作を不要にする）。
-        setSelected(m.available.filter((x) => x.kind === 'tts').map((x) => x.key));
+        // 既定で各モードの全モデルを比較対象にする（アーム操作を不要にする）。
+        setSelectedByMode({
+          streaming: filterModelsByMode(m, 'streaming').available.map((x) => x.key),
+          batch: filterModelsByMode(m, 'batch').available.map((x) => x.key),
+        });
       })
       .catch(() => setModels({ available: [], unavailable: [] }));
     // 各プロバイダーから現在のボイス一覧を取得（失敗しても registry シードで動く）。
@@ -51,19 +60,31 @@ export default function TtsLabPage() {
       .catch(() => setVoicesByModel({}));
   }, []);
 
+  const metric = MODE_METRIC[mode];
+  const modeModels = useMemo(() => (models ? filterModelsByMode(models, mode) : null), [models, mode]);
+  const selected = selectedByMode[mode];
+  const setSelected = (keys: string[]) => setSelectedByMode((prev) => ({ ...prev, [mode]: keys }));
+
   const patch = (modelKey: string, p: Partial<CardState>) =>
     setCards((prev) => prev.map((c) => (c.modelKey === modelKey ? { ...c, ...p } : c)));
 
-  const fastestKey = useMemo(() => {
-    const done = cards.filter((c) => c.status === 'done' && typeof c.serverTtfbMs === 'number');
-    if (done.length < 2) return null;
-    return done.reduce((a, b) => ((a.serverTtfbMs ?? Infinity) <= (b.serverTtfbMs ?? Infinity) ? a : b)).modelKey;
-  }, [cards]);
+  // 実験はモードに紐づくため、モード切替時は結果とプレイヤーを片付ける。
+  const switchMode = (next: TtsMode) => {
+    if (next === mode) return;
+    setMode(next);
+    localStorage.setItem(TTS_MODE_STORAGE_KEY, next);
+    setCards([]);
+    if (hostRef.current) hostRef.current.innerHTML = '';
+    playersRef.current = {};
+  };
 
-  const maxTtfb = useMemo(
-    () => Math.max(1, ...cards.map((c) => c.serverTtfbMs ?? 0)),
-    [cards],
-  );
+  const fastestKey = useMemo(() => {
+    const done = cards.filter((c) => c.status === 'done' && typeof c[metric.key] === 'number');
+    if (done.length < 2) return null;
+    return done.reduce((a, b) => ((a[metric.key] ?? Infinity) <= (b[metric.key] ?? Infinity) ? a : b)).modelKey;
+  }, [cards, metric.key]);
+
+  const maxMetric = useMemo(() => Math.max(1, ...cards.map((c) => c[metric.key] ?? 0)), [cards, metric.key]);
 
   const synthesize = () => {
     if (!models) return;
@@ -123,14 +144,36 @@ export default function TtsLabPage() {
     }
   };
 
-  if (!models) return <div className="loading">loading models…</div>;
+  if (!models || !modeModels) return <div className="loading">loading models…</div>;
 
-  const ttsAvailable = models.available.filter((m) => m.kind === 'tts').length;
+  const modeAvailable = modeModels.available.length;
 
   return (
     <div>
       <Rail label="input" />
       <div className="panel console">
+        <div className="segmented" role="tablist" aria-label="TTS 実験モード">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'streaming'}
+            className={`segmented__opt${mode === 'streaming' ? ' is-on' : ''}`}
+            onClick={() => switchMode('streaming')}
+            title="逐次合成（最初の音までの遅延で比較）"
+          >
+            streaming
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === 'batch'}
+            className={`segmented__opt${mode === 'batch' ? ' is-on' : ''}`}
+            onClick={() => switchMode('batch')}
+            title="一括合成（全文の合成時間で比較）"
+          >
+            batch
+          </button>
+        </div>
         <textarea
           className="field"
           rows={3}
@@ -152,7 +195,7 @@ export default function TtsLabPage() {
               className="btn btn--primary"
               onClick={synthesize}
               disabled={selected.length === 0 || !text.trim()}
-              title="選択中の全モデルへ同時に合成する"
+              title={`${mode} モードの選択モデルへ同時に合成する`}
             >
               ▶ run ({selected.length})
             </button>
@@ -165,17 +208,21 @@ export default function TtsLabPage() {
 
       <Rail
         label="models"
-        hint={ttsAvailable > 0 ? `armed ${selected.length}/${ttsAvailable} · クリックで除外` : undefined}
+        hint={modeAvailable > 0 ? `armed ${selected.length}/${modeAvailable} · クリックで除外` : undefined}
       />
-      {ttsAvailable === 0 ? (
+      {modeAvailable === 0 ? (
         <div className="empty">
-          <div className="empty__big">利用可能な TTS モデルがありません</div>
-          <div>server/.env に API キーを設定すると、ここにモデルが並びます。</div>
+          <div className="empty__big">{mode} な TTS モデルがありません</div>
+          <div>
+            {mode === 'streaming'
+              ? 'streaming 対応モデルのキーを server/.env に設定すると、ここに並びます。'
+              : 'batch（非ストリーミング）モデルのキーを server/.env に設定すると、ここに並びます。'}
+          </div>
         </div>
       ) : (
         <ModelPicker
           kind="tts"
-          models={models}
+          models={modeModels}
           selected={selected}
           onChange={setSelected}
           configs={configs}
@@ -230,26 +277,30 @@ export default function TtsLabPage() {
 
                   <div className="readout">
                     <div className="readout__row">
-                      <span className="readout__k">ttfb · server</span>
+                      <span className="readout__k">{metric.label}</span>
                       <span className="readout__v">
-                        <b>{c.serverTtfbMs ?? '—'}</b>
+                        <b>{c[metric.key] ?? '—'}</b>
                         <i>ms</i>
                       </span>
                     </div>
-                    <div className="readout__row">
-                      <span className="readout__k">ttfb · client</span>
-                      <span className="readout__v">
-                        {typeof c.clientTtfbMs === 'number' && c.clientTtfbMs >= 0 ? c.clientTtfbMs : '—'}
-                        <i>ms</i>
-                      </span>
-                    </div>
-                    <div className="readout__row">
-                      <span className="readout__k">total</span>
-                      <span className="readout__v">
-                        {c.serverTotalMs ?? '—'}
-                        <i>ms</i>
-                      </span>
-                    </div>
+                    {mode === 'streaming' && (
+                      <>
+                        <div className="readout__row">
+                          <span className="readout__k">ttfb · client</span>
+                          <span className="readout__v">
+                            {typeof c.clientTtfbMs === 'number' && c.clientTtfbMs >= 0 ? c.clientTtfbMs : '—'}
+                            <i>ms</i>
+                          </span>
+                        </div>
+                        <div className="readout__row">
+                          <span className="readout__k">total</span>
+                          <span className="readout__v">
+                            {c.serverTotalMs ?? '—'}
+                            <i>ms</i>
+                          </span>
+                        </div>
+                      </>
+                    )}
                     <div className="readout__row">
                       <span className="readout__k">size</span>
                       <span className="readout__v">
@@ -263,13 +314,13 @@ export default function TtsLabPage() {
             })}
           </div>
 
-          {cards.filter((c) => typeof c.serverTtfbMs === 'number').length >= 2 && (
+          {cards.filter((c) => typeof c[metric.key] === 'number').length >= 2 && (
             <>
-              <Rail label="ttfb" hint="server · 昇順" />
+              <Rail label={mode === 'streaming' ? 'ttfb' : '合成時間'} hint="server · 昇順" />
               <div className="panel ttfb">
                 {cards
-                  .filter((c) => typeof c.serverTtfbMs === 'number')
-                  .sort((a, b) => (a.serverTtfbMs ?? 0) - (b.serverTtfbMs ?? 0))
+                  .filter((c) => typeof c[metric.key] === 'number')
+                  .sort((a, b) => (a[metric.key] ?? 0) - (b[metric.key] ?? 0))
                   .map((c) => {
                     const style = { '--ch': providerColor(c.provider) } as CSSProperties;
                     const isBest = c.modelKey === fastestKey;
@@ -277,9 +328,9 @@ export default function TtsLabPage() {
                       <div key={c.modelKey} className={`ttfb__row${isBest ? ' ttfb__row--best' : ''}`} style={style}>
                         <span className="ttfb__label">{c.label}</span>
                         <span className="ttfb__track">
-                          <span className="ttfb__fill" style={{ width: `${((c.serverTtfbMs ?? 0) / maxTtfb) * 100}%` }} />
+                          <span className="ttfb__fill" style={{ width: `${((c[metric.key] ?? 0) / maxMetric) * 100}%` }} />
                         </span>
-                        <span className="ttfb__val">{c.serverTtfbMs} ms</span>
+                        <span className="ttfb__val">{c[metric.key]} ms</span>
                       </div>
                     );
                   })}
