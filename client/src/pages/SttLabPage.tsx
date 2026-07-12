@@ -5,6 +5,7 @@ import { listMics, startMic, type MicCapture, type MicDevice } from '../lib/mic'
 import { providerColor } from '../lib/providers';
 import ModelPicker, { type ModelConfig } from '../components/ModelPicker';
 import LevelMeter from '../components/LevelMeter';
+import Rail from '../components/Rail';
 
 const MIC_STORAGE_KEY = 'voice-lab:stt-mic';
 
@@ -25,7 +26,6 @@ export default function SttLabPage() {
   const [configs, setConfigs] = useState<Record<string, ModelConfig>>({});
   const [columns, setColumns] = useState<Column[]>([]);
   const [running, setRunning] = useState(false);
-  const [note, setNote] = useState('');
   const [level, setLevel] = useState(0);
   const [mics, setMics] = useState<MicDevice[]>([]);
   const [micId, setMicId] = useState(() => localStorage.getItem(MIC_STORAGE_KEY) ?? 'default');
@@ -128,7 +128,7 @@ export default function SttLabPage() {
   const stop = () => {
     micRef.current?.stop();
     micRef.current = null;
-    if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'stop', note }));
+    if (wsRef.current?.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'stop' }));
     setRunning(false);
     setLevel(0);
   };
@@ -139,24 +139,17 @@ export default function SttLabPage() {
 
   return (
     <div>
-      <header className="bench__head">
-        <span className="eyebrow">transcription bench</span>
-        <h1 className="bench__title">マイク入力を同時に文字起こし</h1>
-        <p className="bench__lede">
-          1本のマイク音声を選択したモデルへ同時配信し、逐次認識（partial → final）と確定までの遅延を並べて比較します。
-        </p>
-      </header>
-
+      <Rail
+        label="models"
+        hint={sttAvailable > 0 ? `armed ${selected.length}/${sttAvailable} · クリックで除外` : undefined}
+      />
       {sttAvailable === 0 ? (
         <div className="empty">
           <div className="empty__big">利用可能な STT モデルがありません</div>
           <div>server/.env に API キーを設定すると、ここにモデルが並びます。</div>
         </div>
       ) : (
-        <div className="console">
-          <p className="picker-hint">
-            全 {sttAvailable} モデルを比較中 · 不要なモデルはカード上部をクリックで除外できます
-          </p>
+        <>
           <ModelPicker
             kind="stt"
             models={models}
@@ -166,14 +159,21 @@ export default function SttLabPage() {
             onConfigChange={(k, c) => setConfigs((prev) => ({ ...prev, [k]: c }))}
           />
 
-          <div className="stt-input">
+          <Rail label="control" hint={running ? 'recording…' : undefined} />
+          <div className="panel stt-input">
             {running ? (
-              <button type="button" className="btn btn--record" onClick={stop}>
-                <span className="rec-dot" /> 停止
+              <button type="button" className="btn btn--record" onClick={stop} title="録音を停止して最終確定を待つ">
+                <span className="rec-dot" /> stop
               </button>
             ) : (
-              <button type="button" className="btn btn--primary" onClick={start} disabled={selected.length === 0}>
-                ● 録音開始 ({selected.length})
+              <button
+                type="button"
+                className="btn btn--primary"
+                onClick={start}
+                disabled={selected.length === 0}
+                title="マイク音声を選択中の全モデルへ配信する"
+              >
+                ● rec ({selected.length})
               </button>
             )}
             <select
@@ -192,23 +192,14 @@ export default function SttLabPage() {
               ))}
             </select>
             <LevelMeter level={running ? level : 0} />
-            <input
-              className="field field--inline"
-              style={{ flex: '1 1 240px', width: 'auto' }}
-              placeholder="話した内容のメモ（任意・比較用）"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
           </div>
           {micError && <p className="channel__err">{micError}</p>}
-        </div>
+        </>
       )}
 
       {columns.length > 0 && (
         <>
-          <div className="section-label">
-            <span className="eyebrow">transcripts</span>
-          </div>
+          <Rail label="transcripts" />
           <div className="stt-cols">
             {columns.map((c) => {
               const style = { '--ch': providerColor(c.provider) } as CSSProperties;

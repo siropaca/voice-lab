@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
+import { fetchModels } from './lib/api';
 import TtsLabPage from './pages/TtsLabPage';
 import SttLabPage from './pages/SttLabPage';
 
-/** 上部コマンドバー内のオシロスコープ風ワードマーク */
+/** 上部ステータスバー内のオシロスコープ風ワードマーク */
 function Wordmark() {
   return (
     <div className="wordmark">
@@ -20,6 +22,30 @@ function Wordmark() {
   );
 }
 
+/** 利用可能モデル数の readout。稼働状況を LED で示す。 */
+function StatusLine() {
+  const [counts, setCounts] = useState<{ tts: number; stt: number } | null>(null);
+
+  useEffect(() => {
+    fetchModels()
+      .then((m) =>
+        setCounts({
+          tts: m.available.filter((x) => x.kind === 'tts').length,
+          stt: m.available.filter((x) => x.kind === 'stt').length,
+        }),
+      )
+      .catch(() => setCounts({ tts: 0, stt: 0 }));
+  }, []);
+
+  const ready = counts !== null && counts.tts + counts.stt > 0;
+  return (
+    <div className="statusline" title="利用可能なモデル数">
+      <span className={`statusline__led${ready ? '' : ' statusline__led--warn'}`} />
+      {counts === null ? 'scanning…' : `tts ${counts.tts} · stt ${counts.stt}`}
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <div className="app">
@@ -33,6 +59,7 @@ export default function App() {
             STT
           </NavLink>
         </nav>
+        <StatusLine />
       </header>
       <main className="bench">
         <Routes>

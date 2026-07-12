@@ -5,6 +5,7 @@ import { MsePlayer } from '../lib/mse-player';
 import { providerColor } from '../lib/providers';
 import ModelPicker, { defaultConfig, type ModelConfig } from '../components/ModelPicker';
 import Equalizer from '../components/Equalizer';
+import Rail from '../components/Rail';
 
 const PRESETS = [
   '本日はインタビューにご協力いただきありがとうございます。まずは自己紹介をお願いできますか？',
@@ -123,15 +124,8 @@ export default function TtsLabPage() {
 
   return (
     <div>
-      <header className="bench__head">
-        <span className="eyebrow">synthesis bench</span>
-        <h1 className="bench__title">TTS を横並びで聴き比べる</h1>
-        <p className="bench__lede">
-          同じ文を選択した音声モデルへ同時に送り、声の質感と発話開始までの遅延（TTFB）を並べて比較します。
-        </p>
-      </header>
-
-      <div className="console">
+      <Rail label="input" />
+      <div className="panel console">
         <textarea
           className="field"
           rows={3}
@@ -139,50 +133,54 @@ export default function TtsLabPage() {
           onChange={(e) => setText(e.target.value)}
           placeholder="読み上げる文章を入力…"
         />
-        <div className="presets">
-          {PRESETS.map((p, i) => (
-            <button key={i} type="button" className="preset-chip" title={p} onClick={() => setText(p)}>
-              例文 {i + 1}
-            </button>
-          ))}
-        </div>
-
-        {ttsAvailable === 0 ? (
-          <div className="empty">
-            <div className="empty__big">利用可能な TTS モデルがありません</div>
-            <div>server/.env に API キーを設定すると、ここにモデルが並びます。</div>
+        <div className="console__row">
+          <div className="presets">
+            {PRESETS.map((p, i) => (
+              <button key={i} type="button" className="preset-chip" title={p} onClick={() => setText(p)}>
+                P{i + 1}
+              </button>
+            ))}
           </div>
-        ) : (
-          <>
-            <p className="picker-hint">
-              全 {ttsAvailable} モデルを比較中 · 不要なモデルはカード上部をクリックで除外できます
-            </p>
-            <ModelPicker
-              kind="tts"
-              models={models}
-              selected={selected}
-              onChange={setSelected}
-              configs={configs}
-              onConfigChange={(k, c) => setConfigs((prev) => ({ ...prev, [k]: c }))}
-            />
-          </>
-        )}
-
-        <div className="transport">
-          <button type="button" className="btn btn--primary" onClick={synthesize} disabled={selected.length === 0 || !text.trim()}>
-            ▶ 合成 ({selected.length})
-          </button>
-          <button type="button" className="btn btn--ghost" onClick={playAll} disabled={cards.length === 0}>
-            ⏯ 順次再生
-          </button>
+          <div className="transport">
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={synthesize}
+              disabled={selected.length === 0 || !text.trim()}
+              title="選択中の全モデルへ同時に合成する"
+            >
+              ▶ run ({selected.length})
+            </button>
+            <button type="button" className="btn btn--ghost" onClick={playAll} disabled={cards.length === 0} title="全チャンネルを順番に再生する">
+              ⏵⏵ seq
+            </button>
+          </div>
         </div>
       </div>
 
+      <Rail
+        label="models"
+        hint={ttsAvailable > 0 ? `armed ${selected.length}/${ttsAvailable} · クリックで除外` : undefined}
+      />
+      {ttsAvailable === 0 ? (
+        <div className="empty">
+          <div className="empty__big">利用可能な TTS モデルがありません</div>
+          <div>server/.env に API キーを設定すると、ここにモデルが並びます。</div>
+        </div>
+      ) : (
+        <ModelPicker
+          kind="tts"
+          models={models}
+          selected={selected}
+          onChange={setSelected}
+          configs={configs}
+          onConfigChange={(k, c) => setConfigs((prev) => ({ ...prev, [k]: c }))}
+        />
+      )}
+
       {cards.length > 0 && (
         <>
-          <div className="section-label">
-            <span className="eyebrow">channels</span>
-          </div>
+          <Rail label="output" />
           <div className="channels">
             {cards.map((c, i) => {
               const style = { '--ch': providerColor(c.provider), animationDelay: `${i * 60}ms` } as CSSProperties;
@@ -218,7 +216,7 @@ export default function TtsLabPage() {
                         </button>
                         <Equalizer active={c.playing} />
                         <span className="channel__status">
-                          {c.status === 'running' ? '合成中…' : '準備完了'}
+                          {c.status === 'running' ? 'running…' : 'ready'}
                         </span>
                       </>
                     )}
@@ -261,9 +259,7 @@ export default function TtsLabPage() {
 
           {cards.filter((c) => typeof c.serverTtfbMs === 'number').length >= 2 && (
             <>
-              <div className="section-label" style={{ marginTop: 28 }}>
-                <span className="eyebrow">time to first byte</span>
-              </div>
+              <Rail label="ttfb" hint="server · 昇順" />
               <div className="panel ttfb">
                 {cards
                   .filter((c) => typeof c.serverTtfbMs === 'number')

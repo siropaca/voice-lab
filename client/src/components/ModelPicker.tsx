@@ -52,7 +52,7 @@ export default function ModelPicker({ kind, models, selected, onChange, configs,
             >
               <span className="arm__dot" />
               <span className="arm__provider">{m.providerLabel}</span>
-              <span className="arm__check">{on ? '● 比較中' : '○ 除外中'}</span>
+              <span className="arm__check">{on ? '● armed' : '○ off'}</span>
             </button>
             <div className="arm__name">{m.label}</div>
             <div className="arm__meta">
