@@ -210,9 +210,7 @@ export default function SttLabPage() {
                   <div className="stt-col__head">
                     <span className="channel__dot" />
                     <span className="channel__provider">{c.providerLabel}</span>
-                    <span className="arm__check" style={{ marginLeft: 'auto', color: 'var(--text-dim)' }}>
-                      {c.label}
-                    </span>
+                    <span className="stt-col__model">{c.label}</span>
                   </div>
                   {c.note && <div className="stt-col__note">{c.note}</div>}
                   <div className="stt-col__transcript">

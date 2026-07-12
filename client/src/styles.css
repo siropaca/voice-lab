@@ -931,6 +931,18 @@ button {
   background: var(--ch);
   box-shadow: 0 0 10px var(--ch);
 }
+.stt-col__model {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+  /* モデル名は実際の表記を保つ（大文字化しない） */
+  text-transform: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .stt-col__note {
   padding: 8px 13px 0;
   font-size: 11px;
