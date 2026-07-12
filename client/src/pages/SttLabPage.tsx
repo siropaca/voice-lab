@@ -14,6 +14,7 @@ interface Column {
   provider: string;
   providerLabel: string;
   label: string;
+  note?: string;
   partial: string;
   finals: string[];
   error?: string;
@@ -79,6 +80,7 @@ export default function SttLabPage() {
           provider: m.provider,
           providerLabel: m.providerLabel,
           label: m.label,
+          note: m.note,
           partial: '',
           finals: [],
         };
@@ -212,6 +214,7 @@ export default function SttLabPage() {
                       {c.label}
                     </span>
                   </div>
+                  {c.note && <div className="stt-col__note">{c.note}</div>}
                   <div className="stt-col__transcript">
                     {c.error ? (
                       <span className="channel__err">{c.error}</span>

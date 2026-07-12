@@ -20,6 +20,9 @@ interface CardState {
   provider: string;
   providerLabel: string;
   label: string;
+  note?: string;
+  voiceLabel?: string;
+  params?: { label: string; value: string | number }[];
   status: 'running' | 'done' | 'error';
   error?: string;
   serverTtfbMs?: number;
@@ -95,11 +98,16 @@ export default function TtsLabPage() {
 
     const next: CardState[] = selected.map((modelKey) => {
       const m = models.available.find((x) => x.key === modelKey)!;
+      const voices = voicesByModel[modelKey] ?? m.voices ?? [];
+      const cfg = configs[modelKey] ?? defaultConfig(m, voices);
       return {
         modelKey,
         provider: m.provider,
         providerLabel: m.providerLabel,
         label: m.label,
+        note: m.note,
+        voiceLabel: voices.find((v) => v.id === cfg.voice)?.label ?? cfg.voice,
+        params: (m.params ?? []).map((p) => ({ label: p.label, value: cfg.params[p.name] ?? p.defaultValue })),
         status: 'running',
         playing: false,
       };
@@ -253,6 +261,22 @@ export default function TtsLabPage() {
                     {isFastest && <span className="channel__fastest-badge">fastest</span>}
                   </div>
                   <div className="channel__name">{c.label}</div>
+
+                  <div className="channel__spec">
+                    {c.voiceLabel && (
+                      <div className="channel__spec-row">
+                        <span className="channel__spec-k">voice</span>
+                        <span className="channel__spec-v">{c.voiceLabel}</span>
+                      </div>
+                    )}
+                    {c.params?.map((p) => (
+                      <div key={p.label} className="channel__spec-row">
+                        <span className="channel__spec-k">{p.label}</span>
+                        <span className="channel__spec-v">{p.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {c.note && <div className="channel__note">{c.note}</div>}
 
                   <div className="channel__stage">
                     {c.status === 'error' ? (
