@@ -108,6 +108,6 @@ export function filterAvailable(
   const available = models.filter((m) => m.requiredEnv.every(has));
   const unavailable = models
     .filter((m) => !m.requiredEnv.every(has))
-    .map((m) => ({ key: m.key, label: `${m.providerLabel} ${m.label}`, missingEnv: m.requiredEnv.filter((k) => !has(k)) }));
+    .map((m) => ({ key: m.key, kind: m.kind, label: `${m.providerLabel} ${m.label}`, missingEnv: m.requiredEnv.filter((k) => !has(k)) }));
   return { available, unavailable };
 }

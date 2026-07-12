@@ -36,6 +36,7 @@ export interface ModelEntry {
 
 export interface UnavailableModel {
   key: string;
+  kind: ModelKind;
   label: string;
   missingEnv: string[];
 }

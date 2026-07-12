@@ -30,7 +30,7 @@ interface Props {
  */
 export default function ModelPicker({ kind, models, selected, onChange, configs, onConfigChange }: Props) {
   const list = models.available.filter((m) => m.kind === kind);
-  const unavailable = models.unavailable.filter((u) => u.key.length > 0);
+  const unavailable = models.unavailable.filter((u) => u.kind === kind);
 
   const toggle = (key: string) =>
     onChange(selected.includes(key) ? selected.filter((k) => k !== key) : [...selected, key]);
