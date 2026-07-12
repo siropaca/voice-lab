@@ -27,6 +27,7 @@ export interface ModelEntry {
   label: string;
   requiredEnv: string[];
   streaming: boolean; // 逐次合成/逐次認識に対応しているか（比較表示に使う）
+  location?: string; // Google STT のみ: モデルが提供されるリージョン（例 'us' / 'eu' / 'global'）。未指定は adapter 既定
   audioFormat?: 'mp3' | 'pcm16'; // TTS のみ: クライアントへ流す形式
   sampleRate?: number; // audioFormat が pcm16 のときのレート
   voices?: VoiceSpec[]; // TTS のみ

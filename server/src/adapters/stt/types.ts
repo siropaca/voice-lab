@@ -7,6 +7,7 @@ export interface STTAdapter {
   startSession(opts: {
     model: string;
     params: Record<string, unknown>;
+    location?: string; // Google STT のみ: モデルの提供リージョン。他プロバイダーは無視する
     onPartial: (text: string) => void;
     onFinal: (text: string) => void;
     onError: (err: Error) => void;

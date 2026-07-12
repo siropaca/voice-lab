@@ -23,6 +23,7 @@ export class SttFanout {
         const session = resolve(entry.provider).startSession({
           model: entry.model,
           params: {},
+          location: entry.location,
           onPartial: (text) => this.record(entry.key, 'partial', text),
           onFinal: (text) => this.record(entry.key, 'final', text),
           onError: (err) => this.emit({ type: 'error', modelKey: entry.key, message: err.message }),

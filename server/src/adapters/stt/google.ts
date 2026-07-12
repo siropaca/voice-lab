@@ -16,8 +16,11 @@ type StreamingResponse = protos.google.cloud.speech.v2.IStreamingRecognizeRespon
  */
 export function createGoogleStt(env: Record<string, string | undefined>): STTAdapter {
   return {
-    startSession({ model, params, onPartial, onFinal, onError }): SttSession {
-      const location = env.GOOGLE_SPEECH_LOCATION ?? 'us';
+    startSession({ model, params, location: modelLocation, onPartial, onFinal, onError }): SttSession {
+      // リージョンはモデル固有の指定を最優先（chirp_3 は us/eu のみ等、モデルで決まるため）。
+      const location = modelLocation ?? env.GOOGLE_SPEECH_LOCATION ?? 'us';
+      // global は無印の speech.googleapis.com、リージョン指定は {location}-speech.googleapis.com。
+      const apiEndpoint = location === 'global' ? 'speech.googleapis.com' : `${location}-speech.googleapis.com`;
 
       // ストリーム確立前に届いた音声を貯めるキュー。
       const pending: Uint8Array[] = [];
@@ -29,7 +32,7 @@ export function createGoogleStt(env: Record<string, string | undefined>): STTAda
       void (async () => {
         try {
           const client = new speech.v2.SpeechClient({
-            apiEndpoint: `${location}-speech.googleapis.com`,
+            apiEndpoint,
           });
           const projectId = env.GOOGLE_CLOUD_PROJECT ?? (await client.getProjectId());
           if (closed) return; // init 中に close された場合は開始しない

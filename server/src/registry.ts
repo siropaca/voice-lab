@@ -94,6 +94,14 @@ export const MODELS: ModelEntry[] = [
   {
     key: 'google/chirp_3', kind: 'stt', provider: 'google', providerLabel: 'Google Cloud',
     model: 'chirp_3', label: 'Chirp 3 (STT v2)', requiredEnv: ['GOOGLE_CLOUD_PROJECT'], streaming: true,
+    location: 'us', // Chirp 3 は us/eu マルチリージョンのみ提供（global 不可・実測確認済み）
+    note: 'us リージョン（Chirp 3 は global 非提供）',
+  },
+  {
+    key: 'google/latest_long', kind: 'stt', provider: 'google', providerLabel: 'Google Cloud',
+    model: 'latest_long', label: 'latest_long (STT v2)', requiredEnv: ['GOOGLE_CLOUD_PROJECT'], streaming: true,
+    location: 'global', // Conformer 系。global 提供（実測確認済み）
+    note: 'global リージョン。Conformer 系の汎用モデル',
   },
 ];
 
