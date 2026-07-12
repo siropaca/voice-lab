@@ -42,11 +42,17 @@ export default function ModelPicker({ kind, models, selected, onChange, configs,
         const cfg = configs[m.key] ?? defaultConfig(m);
         const style = { '--ch': providerColor(m.provider) } as CSSProperties;
         return (
-          <div key={m.key} className={`arm${on ? ' arm--on' : ''}`} style={style}>
-            <button type="button" className="arm__top" onClick={() => toggle(m.key)} style={{ all: 'unset', display: 'flex', alignItems: 'center', gap: 9, width: '100%', cursor: 'pointer' }}>
+          <div key={m.key} className={`arm${on ? ' arm--on' : ' arm--excluded'}`} style={style}>
+            <button
+              type="button"
+              className="arm__top"
+              onClick={() => toggle(m.key)}
+              title={on ? '比較から除外する' : '比較に戻す'}
+              style={{ all: 'unset', display: 'flex', alignItems: 'center', gap: 9, width: '100%', cursor: 'pointer' }}
+            >
               <span className="arm__dot" />
               <span className="arm__provider">{m.providerLabel}</span>
-              <span className="arm__check">{on ? '● armed' : '○ arm'}</span>
+              <span className="arm__check">{on ? '● 比較中' : '○ 除外中'}</span>
             </button>
             <div className="arm__name">{m.label}</div>
             <div className="arm__meta">

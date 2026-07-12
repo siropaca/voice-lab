@@ -30,7 +30,11 @@ export default function SttLabPage() {
 
   useEffect(() => {
     fetchModels()
-      .then(setModels)
+      .then((m) => {
+        setModels(m);
+        // 既定で全 STT モデルを比較対象にする（アーム操作を不要にする）。
+        setSelected(m.available.filter((x) => x.kind === 'stt').map((x) => x.key));
+      })
       .catch(() => setModels({ available: [], unavailable: [] }));
     return () => {
       micRef.current?.stop();
@@ -114,6 +118,9 @@ export default function SttLabPage() {
         </div>
       ) : (
         <div className="console">
+          <p className="picker-hint">
+            全 {sttAvailable} モデルを比較中 · 不要なモデルはカード上部をクリックで除外できます
+          </p>
           <ModelPicker
             kind="stt"
             models={models}

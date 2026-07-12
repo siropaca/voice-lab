@@ -37,7 +37,11 @@ export default function TtsLabPage() {
 
   useEffect(() => {
     fetchModels()
-      .then(setModels)
+      .then((m) => {
+        setModels(m);
+        // 既定で全 TTS モデルを比較対象にする（アーム操作を不要にする）。
+        setSelected(m.available.filter((x) => x.kind === 'tts').map((x) => x.key));
+      })
       .catch(() => setModels({ available: [], unavailable: [] }));
   }, []);
 
@@ -149,14 +153,19 @@ export default function TtsLabPage() {
             <div>server/.env に API キーを設定すると、ここにモデルが並びます。</div>
           </div>
         ) : (
-          <ModelPicker
-            kind="tts"
-            models={models}
-            selected={selected}
-            onChange={setSelected}
-            configs={configs}
-            onConfigChange={(k, c) => setConfigs((prev) => ({ ...prev, [k]: c }))}
-          />
+          <>
+            <p className="picker-hint">
+              全 {ttsAvailable} モデルを比較中 · 不要なモデルはカード上部をクリックで除外できます
+            </p>
+            <ModelPicker
+              kind="tts"
+              models={models}
+              selected={selected}
+              onChange={setSelected}
+              configs={configs}
+              onConfigChange={(k, c) => setConfigs((prev) => ({ ...prev, [k]: c }))}
+            />
+          </>
         )}
 
         <div className="transport">
