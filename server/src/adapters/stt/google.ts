@@ -18,7 +18,8 @@ export function createGoogleStt(env: Record<string, string | undefined>): STTAda
   return {
     startSession({ model, params, location: modelLocation, onPartial, onFinal, onError }): SttSession {
       // リージョンはモデル固有の指定を最優先（chirp_3 は us/eu のみ等、モデルで決まるため）。
-      const location = modelLocation ?? env.GOOGLE_SPEECH_LOCATION ?? 'us';
+      // リージョンはモデル固有（registry の location）。未指定は us にフォールバック。
+      const location = modelLocation ?? 'us';
       // global は無印の speech.googleapis.com、リージョン指定は {location}-speech.googleapis.com。
       const apiEndpoint = location === 'global' ? 'speech.googleapis.com' : `${location}-speech.googleapis.com`;
 
