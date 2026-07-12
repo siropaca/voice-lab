@@ -89,7 +89,14 @@ export const MODELS: ModelEntry[] = [
     model: 'chirp3-hd', label: 'Chirp 3 HD', requiredEnv: ['GOOGLE_CLOUD_PROJECT'],
     streaming: false, audioFormat: 'mp3',
     voices: [{ id: 'ja-JP-Chirp3-HD-Aoede', label: 'Aoede' }, { id: 'ja-JP-Chirp3-HD-Leda', label: 'Leda' }],
-    note: '一括合成。ja-JP 天体名30ボイス（streaming 版は chirp3-hd-stream）',
+    note: '一括合成。ja-JP 天体名30ボイス',
+  },
+  {
+    key: 'google/chirp3-hd-streaming', kind: 'tts', provider: 'google', providerLabel: 'Google Cloud',
+    model: 'chirp3-hd-streaming', label: 'Chirp 3 HD（streaming）', requiredEnv: ['GOOGLE_CLOUD_PROJECT'],
+    streaming: true, audioFormat: 'pcm16', sampleRate: 24000,
+    voices: [{ id: 'ja-JP-Chirp3-HD-Aoede', label: 'Aoede' }, { id: 'ja-JP-Chirp3-HD-Leda', label: 'Leda' }],
+    note: 'streamingSynthesize（PCM/24kHz）。最初の音までの TTFB を計測',
   },
   {
     key: 'google/neural2', kind: 'tts', provider: 'google', providerLabel: 'Google Cloud',

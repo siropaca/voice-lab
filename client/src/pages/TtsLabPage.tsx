@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { ModelsResponse, VoiceSpec } from '@voice-lab/shared';
 import { fetchModels, fetchVoices, streamTts } from '../lib/api';
 import { MsePlayer } from '../lib/mse-player';
+import { PcmPlayer } from '../lib/pcm-player';
 import { providerColor } from '../lib/providers';
 import { filterModelsByMode, MODE_METRIC, TTS_MODE_STORAGE_KEY, type TtsMode } from '../lib/ttsMode';
 import ModelPicker, { defaultConfig, type ModelConfig } from '../components/ModelPicker';
@@ -40,7 +41,7 @@ export default function TtsLabPage() {
   const [voicesByModel, setVoicesByModel] = useState<Record<string, VoiceSpec[]>>({});
   const [text, setText] = useState(PRESETS[0]);
   const [cards, setCards] = useState<CardState[]>([]);
-  const playersRef = useRef<Record<string, MsePlayer>>({});
+  const playersRef = useRef<Record<string, MsePlayer | PcmPlayer>>({});
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -108,7 +109,8 @@ export default function TtsLabPage() {
     for (const modelKey of selected) {
       const m = models.available.find((x) => x.key === modelKey)!;
       const cfg = configs[modelKey] ?? defaultConfig(m, voicesByModel[modelKey]);
-      const player = new MsePlayer();
+      // PCM を返すモデル（Google Chirp 3 HD streaming）は Web Audio 再生、mp3 は MSE。
+      const player = m.audioFormat === 'pcm16' ? new PcmPlayer(m.sampleRate ?? 24000) : new MsePlayer();
       playersRef.current[modelKey] = player;
       player.audioEl.style.display = 'none';
       player.audioEl.addEventListener('play', () => patch(modelKey, { playing: true }));

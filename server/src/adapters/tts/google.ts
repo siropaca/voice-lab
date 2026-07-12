@@ -2,9 +2,15 @@ import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import type { protos } from '@google-cloud/text-to-speech';
 import type { TTSAdapter, TTSRequest, Voice } from './types.js';
 
+/** Chirp 3 HD streaming 合成（streamingSynthesize）の内部モデル ID。 */
+const CHIRP3_STREAMING_MODEL = 'chirp3-hd-streaming';
+/** streaming 合成の出力サンプルレート（PCM16 mono）。MP3 は streaming 非対応のため PCM を使う。 */
+const STREAMING_SAMPLE_RATE = 24000;
+
 /** フルネーム系モデル（voice 名に系統が内包される）の voices.list 抽出フィルタ。 */
 const GOOGLE_VOICE_FILTER: Record<string, RegExp> = {
   'chirp3-hd': /Chirp3-HD/i,
+  [CHIRP3_STREAMING_MODEL]: /Chirp3-HD/i,
   neural2: /Neural2/i,
   wavenet: /Wavenet/i,
   standard: /Standard/i,
@@ -77,6 +83,26 @@ export function createGoogleTts(env: Record<string, string | undefined>): TTSAda
 
     async *synthesize(req: TTSRequest): AsyncIterable<Uint8Array> {
       const activeClient = getClient();
+
+      // Chirp 3 HD の streaming 合成: streamingSynthesize（gRPC 双方向）で PCM を逐次取得する。
+      // MP3 は streaming 非対応（実測で INVALID_ARGUMENT）のため PCM16/24kHz を返す。
+      if (req.model === CHIRP3_STREAMING_MODEL) {
+        const stream = activeClient.streamingSynthesize();
+        stream.write({
+          streamingConfig: {
+            voice: { languageCode: 'ja-JP', name: req.voice },
+            streamingAudioConfig: { audioEncoding: 'PCM', sampleRateHertz: STREAMING_SAMPLE_RATE },
+          },
+        });
+        stream.write({ input: { text: req.text } });
+        stream.end();
+        for await (const response of stream as AsyncIterable<protos.google.cloud.texttospeech.v1.IStreamingSynthesizeResponse>) {
+          const audio = response.audioContent;
+          if (audio == null) continue;
+          yield typeof audio === 'string' ? new Uint8Array(Buffer.from(audio, 'base64')) : new Uint8Array(audio);
+        }
+        return;
+      }
 
       // フルネーム voice（ja-JP-Chirp3-HD-* / -Neural2-* / -Wavenet-* / -Standard-* 等）は
       // 系統が名前に内包されるため modelName 不要。Gemini TTS は Kore/Puck 等の短名なので
