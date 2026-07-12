@@ -1,7 +1,6 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
 import TtsLabPage from './pages/TtsLabPage';
 import SttLabPage from './pages/SttLabPage';
-import HistoryPage from './pages/HistoryPage';
 
 /** 上部コマンドバー内のオシロスコープ風ワードマーク */
 function Wordmark() {
@@ -33,16 +32,12 @@ export default function App() {
           <NavLink to="/stt" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
             STT
           </NavLink>
-          <NavLink to="/history" className={({ isActive }) => `nav-link${isActive ? ' nav-link--active' : ''}`}>
-            履歴
-          </NavLink>
         </nav>
       </header>
       <main className="bench">
         <Routes>
           <Route path="/" element={<TtsLabPage />} />
           <Route path="/stt" element={<SttLabPage />} />
-          <Route path="/history" element={<HistoryPage />} />
         </Routes>
       </main>
     </div>

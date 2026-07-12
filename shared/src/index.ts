@@ -67,32 +67,3 @@ export type SttServerMessage =
   | { type: 'partial' | 'final'; modelKey: string; text: string; at: number }
   | { type: 'error'; modelKey: string; message: string }
   | { type: 'summary'; stoppedAt: number; models: Record<string, SttModelSummary> };
-
-// ---- 実行履歴（Task 17） ----
-
-export interface TtsRunRecord {
-  id: string;
-  kind: 'tts';
-  at: string; // ISO 8601
-  modelKey: string;
-  text: string;
-  voice: string;
-  params: Record<string, unknown>;
-  serverTtfbMs?: number;
-  serverTotalMs?: number;
-  bytes?: number;
-  error?: string;
-  audioFile?: string; // data/audio/ 内のファイル名
-}
-
-export interface SttRunRecord {
-  id: string;
-  kind: 'stt';
-  at: string;
-  note?: string;
-  models: Record<string, SttModelSummary>;
-  events?: Array<{ modelKey: string; type: 'partial' | 'final'; text: string; at: number }>;
-  audioFile?: string;
-}
-
-export type RunRecord = TtsRunRecord | SttRunRecord;

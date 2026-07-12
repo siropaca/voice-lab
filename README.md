@@ -10,7 +10,8 @@
 
 - **TTS Lab** — 同じ文を複数モデルへ同時に合成し、声を聴き比べ、TTFB（発話開始までの遅延）を並べて比較
 - **STT Lab** — マイク音声を複数モデルへ同時配信し、逐次認識（partial → final）と確定遅延を比較
-- **履歴** — 過去の合成・文字起こしを音声つきで保存・再生
+
+各ラボとも、利用可能なモデルは既定で全部表示・全部比較対象になる（不要なものはカード上部をクリックで除外）。
 
 対応プロバイダー: TTS = OpenAI / ElevenLabs / Google Cloud / Aivis Cloud、STT = OpenAI / Deepgram / ElevenLabs / Google Cloud。
 同一プロバイダーの複数モデル（例: ElevenLabs Flash v2.5 と v3）も同時に比較できる。
@@ -55,7 +56,6 @@ pnpm -r typecheck
 
 - **ElevenLabs の声は暫定**（多言語ボイスの `voice_id` を仮設定）。日本語ネイティブではないため、キー取得後に `GET /v2/voices` を叩いて日本語ボイスの `voice_id` を `server/src/registry.ts` に反映することを推奨。
 - **レイテンシ値はネットワーク依存**。ローカル実行時は「自宅回線 → 各社」の値になる。本番想定（東京 DC → 各社）の数値が必要なら Cloud Run 等へのデプロイ後に計測する（デプロイは第二フェーズ）。
-- 実行履歴は `data/`（runs.jsonl + audio/）に保存され、git 管理外。
 
 ## 構成
 

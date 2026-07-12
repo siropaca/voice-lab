@@ -3,8 +3,6 @@ import { createNodeWebSocket } from '@hono/node-ws';
 import { modelsRoute } from './routes/models.js';
 import { ttsRoute } from './routes/tts.js';
 import { sttWsRoute } from './routes/stt-ws.js';
-import { historyRoute } from './routes/history.js';
-import { createHistory } from './history.js';
 import { createOpenAiTts } from './adapters/tts/openai.js';
 import { createElevenLabsTts } from './adapters/tts/elevenlabs.js';
 import { createAivisTts } from './adapters/tts/aivis.js';
@@ -27,8 +25,6 @@ export function createApp(env: Record<string, string | undefined>) {
   app.get('/api/health', (c) => c.json({ ok: true }));
   app.route('/api/models', modelsRoute(env));
 
-  const history = createHistory(env.DATA_DIR ?? 'data');
-
   const ttsAdapters: Record<string, TTSAdapter> = {
     openai: createOpenAiTts(env),
     elevenlabs: createElevenLabsTts(env),
@@ -49,23 +45,17 @@ export function createApp(env: Record<string, string | undefined>) {
       const a = ttsAdapters[provider];
       if (!a) throw new Error(`TTS adapter not found: ${provider}`);
       return a;
-    }, history),
+    }),
   );
 
   app.route(
     '/ws/stt',
-    sttWsRoute(
-      upgradeWebSocket,
-      (provider) => {
-        const a = sttAdapters[provider];
-        if (!a) throw new Error(`STT adapter not found: ${provider}`);
-        return a;
-      },
-      history,
-    ),
+    sttWsRoute(upgradeWebSocket, (provider) => {
+      const a = sttAdapters[provider];
+      if (!a) throw new Error(`STT adapter not found: ${provider}`);
+      return a;
+    }),
   );
-
-  app.route('/api/history', historyRoute(history));
 
   return { app, injectWebSocket, upgradeWebSocket };
 }

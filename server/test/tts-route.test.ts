@@ -1,10 +1,6 @@
-import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { Hono } from 'hono';
 import { ttsRoute } from '../src/routes/tts.js';
-import { createHistory } from '../src/history.js';
 import type { TTSAdapter } from '../src/adapters/tts/types.js';
 
 const fake: TTSAdapter = {
@@ -28,9 +24,8 @@ async function readLines(res: Response) {
 }
 
 function appWith(adapter: TTSAdapter) {
-  const history = createHistory(mkdtempSync(join(tmpdir(), 'vl-')));
   const app = new Hono();
-  app.route('/api/tts', ttsRoute(() => adapter, history));
+  app.route('/api/tts', ttsRoute(() => adapter));
   return app;
 }
 
