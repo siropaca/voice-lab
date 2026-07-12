@@ -3,8 +3,9 @@
 日本語 TTS / STT クラウド API を品質・レイテンシ・ストリーミング対応で並べて比較する実験用 Web GUI。
 最終目的は「Web 上で人間にインタビューする AI アバター」の音声モデル選定。
 
-- 設計: [docs/2026-07-12-voice-lab-design.md](docs/2026-07-12-voice-lab-design.md)
-- 実装計画: [docs/2026-07-12-voice-lab-plan.md](docs/2026-07-12-voice-lab-plan.md)
+- 設計: [docs/specs/2026-07-12-voice-lab-design.md](docs/specs/2026-07-12-voice-lab-design.md)
+- 実装計画: [docs/specs/2026-07-12-voice-lab-plan.md](docs/specs/2026-07-12-voice-lab-plan.md)
+- 開発者向けルール・ドキュメントマップ: [AGENTS.md](AGENTS.md)
 
 ## できること（第一フェーズ）
 

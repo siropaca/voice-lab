@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript / pnpm workspace / Hono + @hono/node-server + @hono/node-ws / ws / Vite + React + react-router / vitest / @google-cloud/text-to-speech / @google-cloud/speech / Docker + Cloud Run
 
-**Spec:** `docs/2026-07-12-voice-lab-design.md`
+**Spec:** `docs/specs/2026-07-12-voice-lab-design.md`
 
 ## Global Constraints
 
@@ -2942,7 +2942,7 @@ Expected:
 ```markdown
 # voice-lab
 
-日本語 TTS/STT クラウド API の比較実験環境。設計: docs/2026-07-12-voice-lab-design.md
+日本語 TTS/STT クラウド API の比較実験環境。設計: docs/specs/2026-07-12-voice-lab-design.md
 
 - ローカル: `pnpm install && pnpm dev` （キーは server/.env に。server/.env.example 参照）
 - デプロイ: docs/deploy.md
