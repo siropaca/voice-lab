@@ -35,9 +35,17 @@ export class PcmPlayer {
   /** これ以上チャンクが来ないことを通知する（PCM では貯めるだけなので何もしない）。 */
   endOfStream() {}
 
-  /** 貯めた PCM をまとめて再生する。 */
+  /** 再生する。一時停止中（AudioContext suspended）なら続きから再開する。 */
   async play() {
-    this.stop();
+    // 一時停止からの再開: 既存の context/source を suspend→resume で続行。
+    if (this.ctx && this.source && this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+      this.audioEl.dispatchEvent(new Event('play'));
+      return;
+    }
+
+    // 新規再生（前回分があれば片付けて最初から）。
+    this.teardown();
     const total = this.chunks.reduce((sum, c) => sum + c.length, 0);
     if (total === 0) return;
 
@@ -55,21 +63,34 @@ export class PcmPlayer {
     source.buffer = buffer;
     source.connect(ctx.destination);
     source.onended = () => {
+      // 自然終了。teardown 経由の stop では onended を外してから止めるのでここは来ない。
       this.audioEl.dispatchEvent(new Event('pause'));
       this.audioEl.dispatchEvent(new Event('ended'));
+      this.teardown();
     };
     if (ctx.state === 'suspended') await ctx.resume();
     source.start();
     this.audioEl.dispatchEvent(new Event('play'));
   }
 
-  private stop() {
-    try {
-      this.source?.stop();
-    } catch {
-      /* not started */
+  /** 一時停止する（play() で続きから再開できる）。 */
+  pause() {
+    if (this.ctx && this.ctx.state === 'running') {
+      void this.ctx.suspend();
+      this.audioEl.dispatchEvent(new Event('pause'));
     }
-    this.source = null;
+  }
+
+  private teardown() {
+    if (this.source) {
+      this.source.onended = null;
+      try {
+        this.source.stop();
+      } catch {
+        /* not started */
+      }
+      this.source = null;
+    }
     if (this.ctx) {
       void this.ctx.close();
       this.ctx = null;

@@ -40,9 +40,14 @@ export class MsePlayer {
     this.pump();
   }
 
-  /** 再生を開始する */
+  /** 再生を開始する（一時停止中なら続きから再開する） */
   async play() {
     await this.audioEl.play();
+  }
+
+  /** 再生を一時停止する（play() で続きから再開できる） */
+  pause() {
+    this.audioEl.pause();
   }
 
   private pump() {

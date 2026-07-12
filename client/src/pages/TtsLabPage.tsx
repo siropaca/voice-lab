@@ -263,11 +263,11 @@ export default function TtsLabPage() {
                           type="button"
                           className="btn btn--icon"
                           disabled={c.status !== 'done'}
-                          onClick={() => player?.play()}
-                          aria-label="再生"
-                          title="再生"
+                          onClick={() => (c.playing ? player?.pause() : player?.play())}
+                          aria-label={c.playing ? '一時停止' : '再生'}
+                          title={c.playing ? '一時停止' : '再生'}
                         >
-                          ▶
+                          {c.playing ? '⏸' : '▶'}
                         </button>
                         <Equalizer active={c.playing} />
                         <span className="channel__status">
