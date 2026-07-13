@@ -1,13 +1,14 @@
 .DEFAULT_GOAL := help
-.PHONY: help bootstrap dev test typecheck build clean
+.PHONY: help bootstrap bs dev test typecheck build clean
 
 help: ## このヘルプを表示
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-bootstrap: ## 依存をインストールし、server/.env を用意する
+bootstrap: ## 依存をインストールし、server/.env と server/keys を用意する
 	@command -v pnpm >/dev/null 2>&1 || { echo "pnpm が見つかりません。'corepack enable' か 'npm i -g pnpm' を実行してください。"; exit 1; }
 	pnpm install
+	@mkdir -p server/keys
 	@if [ ! -f server/.env ]; then \
 		cp server/.env.example server/.env; \
 		echo ""; \
@@ -16,6 +17,8 @@ bootstrap: ## 依存をインストールし、server/.env を用意する
 		echo ""; \
 		echo "→ server/.env は既に存在します（上書きしません）。"; \
 	fi
+
+bs: bootstrap ## bootstrap のエイリアス
 
 dev: ## client (5173) と server (3001) を同時起動
 	pnpm dev
