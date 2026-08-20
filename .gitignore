@@ -7,3 +7,6 @@ data/
 # 認証情報（サービスアカウント JSON 等）はコミットしない
 keys/
 *-service-account*.json
+
+.idea
+settings.local.json
